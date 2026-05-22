@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tahta Oyunu</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    overflow-x: hidden;
+  }
+  h1 { font-size: 1.3rem; margin-bottom: 8px; color: #e94560; }
+  .info-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 400px; margin-bottom: 8px; gap: 8px; }
+  .player-indicator { padding: 6px 14px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; }
+  .player1-bg { background: #0f3460; border: 2px solid #3282b8; }
+  .player2-bg { background: #6b0f1a; border: 2px solid #e94560; }
+  .board-container { position: relative; width: 100%; max-width: 400px; aspect-ratio: 1; }
+  .board { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); width: 100%; height: 100%; border: 2px solid #e94560; border-radius: 6px; overflow: hidden; }
+  .cell { border: 1px solid #16213e; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: bold; cursor: pointer; transition: background 0.2s; position: relative; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .cell.light { background: #16213e; }
+  .cell.dark { background: #0f3460; }
+  .cell:hover { filter: brightness(1.3); }
+  .cell.valid-target { box-shadow: inset 0 0 0 3px #e9e945; animation: pulse 1s infinite; }
+  .cell.selected-cell { box-shadow: inset 0 0 0 3px #00ff88; background: #1a3a2e !important; }
+  .cell.move-target { box-shadow: inset 0 0 0 3px #00ccff; animation: pulseMove 1s infinite; }
+  .cell.ball-target { box-shadow: inset 0 0 0 3px #ffd700; animation: pulseBall 1s infinite; }
+  .cell.kicker-cell { box-shadow: inset 0 0 0 3px #ff8c00; background: #3a2a0e !important; }
+  .cell.card-target { box-shadow: inset 0 0 0 3px #ff00ff; animation: pulseCard 1s infinite; }
+  .cell.wall-cell { background: #4a3728 !important; }
+  .cell.wall-cell::after { content: ''; position: absolute; inset: 3px; border: 2px dashed #8B4513; border-radius: 3px; pointer-events: none; }
+
+  @keyframes pulse { 0%,100% { box-shadow: inset 0 0 0 3px #e9e945; } 50% { box-shadow: inset 0 0 0 3px #e9e94588; } }
+  @keyframes pulseMove { 0%,100% { box-shadow: inset 0 0 0 3px #00ccff; } 50% { box-shadow: inset 0 0 0 3px #00ccff88; } }
+  @keyframes pulseBall { 0%,100% { box-shadow: inset 0 0 0 3px #ffd700; } 50% { box-shadow: inset 0 0 0 3px #ffd70088; } }
+  @keyframes pulseCard { 0%,100% { box-shadow: inset 0 0 0 3px #ff00ff; } 50% { box-shadow: inset 0 0 0 3px #ff00ff88; } }
+
+  .cell .piece { width: 80%; height: 80%; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); position: relative; }
+  .cell .piece.ball { width: 70%; height: 70%; background: radial-gradient(circle at 35% 35%, #fff, #ffd700, #ff8c00); border: 2px solid #fff; color: #333; font-size: 0.9rem; box-shadow: 0 0 10px rgba(255,215,0,0.6); }
+  .piece.p1-plus { background: linear-gradient(135deg, #3282b8, #0f3460); color: #7ec8e3; border: 2px solid #7ec8e3; }
+  .piece.p1-minus { background: linear-gradient(135deg, #1a5276, #0a2647); color: #5dade2; border: 2px solid #5dade2; }
+  .piece.p2-plus { background: linear-gradient(135deg, #e94560, #6b0f1a); color: #ffd1d1; border: 2px solid #ffd1d1; }
+  .piece.p2-minus { background: linear-gradient(135deg, #c0392b, #7b241c); color: #f1948a; border: 2px solid #f1948a; }
+
+  .effect-icons { position: absolute; top: -2px; right: -2px; display: flex; gap: 1px; font-size: 0.45rem; }
+  .effect-icon { background: #000a; border-radius: 3px; padding: 0 2px; line-height: 1.2; }
+
+  .controls { width: 100%; max-width: 400px; margin-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .dice-area { display: flex; align-items: center; gap: 15px; }
+  .dice { width: 60px; height: 60px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #1a1a2e; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+  .dice.d3 { background: linear-gradient(135deg, #ffd700, #ff8c00); border-radius: 50%; width: 55px; height: 55px; }
+  .dice.rolling { animation: roll 0.5s ease-out; }
+  @keyframes roll { 0% { transform: rotate(0) scale(0.8); } 50% { transform: rotate(180deg) scale(1.1); } 100% { transform: rotate(360deg) scale(1); } }
+
+  .btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; color: #fff; }
+  .btn:active { transform: scale(0.95); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-roll { background: #e94560; }
+  .btn-roll:hover:not(:disabled) { background: #ff6b81; }
+  .btn-piece { padding: 8px 16px; font-size: 0.85rem; border-radius: 6px; }
+  .piece-selector { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .btn-piece.selected { box-shadow: 0 0 0 3px #e9e945; transform: scale(1.05); }
+  .btn-piece.p1-plus-btn { background: #3282b8; }
+  .btn-piece.p1-minus-btn { background: #1a5276; }
+  .btn-piece.p2-plus-btn { background: #e94560; }
+  .btn-piece.p2-minus-btn { background: #c0392b; }
+  .remaining { font-size: 0.75rem; color: #aaa; margin-top: 2px; }
+  .message { text-align: center; font-size: 0.9rem; min-height: 1.4em; color: #e9e945; }
+  .phase-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; margin-bottom: 6px; }
+  .phase-badge.placement { background: #2d6a4f; color: #b7e4c7; }
+  .phase-badge.ball-placement { background: #b8860b; color: #fff8dc; }
+  .phase-badge.movement { background: #7b2d8b; color: #e0b0ff; }
+  .log { width: 100%; max-width: 400px; margin-top: 10px; max-height: 80px; overflow-y: auto; font-size: 0.7rem; color: #888; border-top: 1px solid #333; padding-top: 6px; }
+  .log div { margin-bottom: 2px; }
+  .initial-roll-area { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px; }
+  .initial-roll-area .dice-row { display: flex; gap: 20px; align-items: center; }
+  .initial-roll-area .player-dice-label { text-align: center; font-size: 0.8rem; margin-bottom: 4px; }
+  .move-info { font-size: 0.8rem; color: #ccc; text-align: center; line-height: 1.4; }
+  .btn-skip { background: #555; font-size: 0.8rem; padding: 6px 16px; }
+  .btn-skip:hover { background: #777; }
+  .mode-selector { display: flex; gap: 10px; justify-content: center; }
+  .btn-mode { padding: 10px 18px; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: bold; cursor: pointer; color: #fff; transition: all 0.2s; }
+  .btn-mode:active { transform: scale(0.95); }
+  .btn-mode.mode-piece { background: #2d6a4f; }
+  .btn-mode.mode-piece:hover { background: #40916c; }
+  .btn-mode.mode-ball { background: #b8860b; }
+  .btn-mode.mode-ball:hover { background: #daa520; }
+
+  /* CARD SYSTEM */
+  .cards-section { width: 100%; max-width: 400px; margin-top: 8px; }
+  .cards-header { font-size: 0.8rem; color: #aaa; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+  .card-hand { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0; -webkit-overflow-scrolling: touch; }
+  .card { min-width: 70px; padding: 6px 8px; border-radius: 8px; background: #2a2a4a; border: 2px solid #555; cursor: pointer; text-align: center; transition: all 0.2s; flex-shrink: 0; }
+  .card:hover { border-color: #e9e945; transform: translateY(-2px); }
+  .card:active { transform: scale(0.95); }
+  .card.active-card { border-color: #ff00ff; box-shadow: 0 0 8px #ff00ff88; }
+  .card-icon { font-size: 1.2rem; }
+  .card-name { font-size: 0.55rem; color: #ccc; margin-top: 2px; white-space: nowrap; }
+  .card-desc { font-size: 0.5rem; color: #888; margin-top: 1px; }
+
+  .win-overlay { position: fixed; inset: 0; background: #000c; display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .win-box { background: #1a1a2e; border: 3px solid #e94560; border-radius: 16px; padding: 30px 40px; text-align: center; }
+  .win-box h2 { font-size: 1.5rem; margin-bottom: 10px; }
+  .win-box .btn { margin-top: 15px; }
+</style>
+</head>
+<body>
+
+<h1>Tahta Oyunu</h1>
+<div class="info-bar">
+  <div class="player-indicator player1-bg" id="p1indicator">Oyuncu 1 (Mavi)</div>
+  <div class="player-indicator player2-bg" id="p2indicator">Oyuncu 2 (Kırmızı)</div>
+</div>
+<div id="phaseBadge"></div>
+<div class="message" id="message">Başlamak için zar atın!</div>
+<div class="board-container"><div class="board" id="board"></div></div>
+<div class="controls" id="controls"></div>
+<div id="cardArea"></div>
+<div class="log" id="log"></div>
+<div id="winOverlay"></div>
+
+<script>
+// ==================== CARD DEFINITIONS ====================
+const CARD_DEFS = {
+  shield:   { name: 'Kalkan',    icon: '🛡️', desc: 'Bu tur top etkisiz', target: 'own-piece', turnBased: true },
+  wall:     { name: 'Duvar',     icon: '🧱', desc: '2 tur bariyer',       target: 'empty-cell', turnBased: false },
+  promote:  { name: 'Terfi',     icon: '⬆️', desc: '− → + dönüştür',     target: 'own-minus',  turnBased: false },
+  reroll:   { name: 'Tekrar At', icon: '🎲', desc: 'Zarı tekrar at',      target: 'none',       turnBased: false },
+  speed:    { name: 'Hız',       icon: '⚡', desc: '+1 birim hareket',    target: 'own-piece',  turnBased: true },
+  shotBoost:{ name: 'Şut Güç',  icon: '🔥', desc: 'Top +1 birim',       target: 'own-piece',  turnBased: true },
+  reflect:  { name: 'Yansıtma', icon: '🔄', desc: 'Top geri döner',      target: 'own-piece',  turnBased: true },
+};
+const CARD_POOL = Object.keys(CARD_DEFS);
+
+// ==================== STATE ====================
+const state = {
+  phase: 'initial-roll',
+  board: Array.from({length: 8}, () => Array(8).fill(null)),
+  currentPlayer: null, diceValue: null, selectedPiece: null,
+  pieces: { 1: { plus: 8, minus: 8 }, 2: { plus: 8, minus: 8 } },
+  initialRolls: { 1: null, 2: null },
+  firstPlayer: null, turnNumber: 0, placedThisTurn: 0, totalPlaced: 0,
+  ballPos: null,
+  moveMode: null, selectedPiecePos: null, moveTargets: [], ballKickTargets: [],
+  // Cards
+  hands: { 1: [], 2: [] },
+  activeCard: null, // { type, ... } card being targeted
+  walls: [], // { row, col, turnsLeft }
+  moveTurnCount: 0, // total movement turns elapsed (for wall countdown)
+};
+
+function log(msg) { const el=document.getElementById('log'); const d=document.createElement('div'); d.textContent=msg; el.prepend(d); }
+function setMessage(msg) { document.getElementById('message').textContent=msg; }
+
+function updatePhaseBadge() {
+  const el=document.getElementById('phaseBadge');
+  if (state.phase==='placement') el.innerHTML='<span class="phase-badge placement">YERLEŞTİRME</span>';
+  else if (state.phase==='ball-placement') el.innerHTML='<span class="phase-badge ball-placement">TOP YERLEŞTİRME</span>';
+  else if (state.phase==='movement') el.innerHTML='<span class="phase-badge movement">HAREKET</span>';
+  else el.innerHTML='';
+}
+
+function rollDice() { return Math.floor(Math.random()*6)+1; }
+function rollD3() { return Math.floor(Math.random()*3)+1; }
+function drawCard() { return CARD_POOL[Math.floor(Math.random()*CARD_POOL.length)]; }
+
+function getPieceEffects(row, col) {
+  const p = state.board[row][col];
+  if (!p || !p.effects) return [];
+  return Object.keys(p.effects).filter(k => p.effects[k]);
+}
+
+function hasEffect(row, col, effect) {
+  const p = state.board[row][col];
+  return p && p.effects && p.effects[effect];
+}
+
+function isWall(row, col) {
+  return state.walls.some(w => w.row===row && w.col===col);
+}
+
+// ==================== WIN CONDITION ====================
+function checkWin() {
+  let p1Plus=0, p2Plus=0;
+  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+    const p=state.board[r][c];
+    if (p && p.type==='plus') { if(p.player===1) p1Plus++; else p2Plus++; }
+  }
+  if (p1Plus===0) return 2;
+  if (p2Plus===0) return 1;
+  return null;
+}
+
+function showWin(winner) {
+  state.phase = 'done';
+  const ov = document.getElementById('winOverlay');
+  const color = winner===1 ? '#3282b8' : '#e94560';
+  ov.innerHTML = `<div class="win-box"><h2 style="color:${color}">Oyuncu ${winner} Kazandı!</h2><p>Tüm rakip + taşları yok edildi!</p><button class="btn btn-roll" onclick="resetGame();document.getElementById('winOverlay').innerHTML=''">Yeniden Başla</button></div>`;
+}
+
+// ==================== BOARD RENDERING ====================
+function renderBoard() {
+  const board=document.getElementById('board');
+  board.innerHTML='';
+  for (let r=0;r<8;r++) {
+    for (let c=0;c<8;c++) {
+      const cell=document.createElement('div');
+      cell.className=`cell ${(r+c)%2===0?'light':'dark'}`;
+      cell.dataset.row=r; cell.dataset.col=c;
+
+      if (isWall(r,c)) cell.classList.add('wall-cell');
+
+      const val=state.board[r][c];
+      if (val) {
+        const piece=document.createElement('div');
+        const cls=val.player===1?(val.type==='plus'?'p1-plus':'p1-minus'):(val.type==='plus'?'p2-plus':'p2-minus');
+        piece.className=`piece ${cls}`;
+        piece.textContent=val.type==='plus'?'+':'−';
+        // Effect icons
+        const efx = getPieceEffects(r,c);
+        if (efx.length>0) {
+          const icons=document.createElement('div');
+          icons.className='effect-icons';
+          const iconMap={shield:'🛡️',speed:'⚡',shotBoost:'🔥',reflect:'🔄'};
+          efx.forEach(e=>{const s=document.createElement('span');s.className='effect-icon';s.textContent=iconMap[e]||'';icons.appendChild(s);});
+          piece.appendChild(icons);
+        }
+        cell.appendChild(piece);
+      }
+
+      if (state.ballPos && state.ballPos[0]===r && state.ballPos[1]===c) {
+        const ball=document.createElement('div'); ball.className='piece ball'; ball.textContent='⚽'; cell.appendChild(ball);
+      }
+
+      // Highlights
+      if (state.phase==='placement' && state.selectedPiece && !val && isValidPlacement(r,c,state.currentPlayer)) cell.classList.add('valid-target');
+      if (state.phase==='ball-placement' && !val && !isWall(r,c)) cell.classList.add('valid-target');
+
+      if (state.phase==='movement') {
+        if (state.selectedPiecePos && state.selectedPiecePos[0]===r && state.selectedPiecePos[1]===c) cell.classList.add('selected-cell');
+        if (state.moveTargets.some(t=>t[0]===r&&t[1]===c)) cell.classList.add('move-target');
+        if (state.ballKickTargets.some(t=>t[0]===r&&t[1]===c)) cell.classList.add('ball-target');
+        if (state.moveMode==='ball' && state.selectedPiecePos && state.selectedPiecePos[0]===r && state.selectedPiecePos[1]===c) cell.classList.add('kicker-cell');
+      }
+
+      // Card targeting highlights
+      if (state.activeCard) {
+        const ct=CARD_DEFS[state.activeCard.type].target;
+        if (ct==='own-piece' && val && val.player===state.currentPlayer) cell.classList.add('card-target');
+        if (ct==='own-minus' && val && val.player===state.currentPlayer && val.type==='minus') cell.classList.add('card-target');
+        if (ct==='empty-cell' && !val && !isWall(r,c) && !(state.ballPos&&state.ballPos[0]===r&&state.ballPos[1]===c)) cell.classList.add('card-target');
+      }
+
+      cell.addEventListener('click', () => onCellClick(r, c));
+      board.appendChild(cell);
+    }
+  }
+}
+
+// ==================== PLACEMENT ====================
+function isValidPlacement(row,col,player) {
+  if (state.board[row][col]) return false;
+  if (player===1&&row<6) return false;
+  if (player===2&&row>1) return false;
+  return true;
+}
+function getTotalRemaining(p) { return state.pieces[p].plus+state.pieces[p].minus; }
+
+function nextPlacementTurn() {
+  if (state.totalPlaced>=32||(getTotalRemaining(1)===0&&getTotalRemaining(2)===0)) { startBallPlacement(); return; }
+  state.turnNumber++;
+  let np=state.currentPlayer===1?2:1;
+  if (getTotalRemaining(np)===0) np=np===1?2:1;
+  state.currentPlayer=np; state.diceValue=null; state.placedThisTurn=0; state.selectedPiece=null;
+  renderBoard(); renderControls(); setMessage(`Oyuncu ${np} - Zar atın!`);
+}
+
+// ==================== MOVEMENT ====================
+function startBallPlacement() {
+  state.phase='ball-placement'; state.currentPlayer=state.firstPlayer;
+  updatePhaseBadge(); renderBoard(); renderControls();
+  log('--- TOP YERLEŞTİRME ---');
+  setMessage(`Oyuncu ${state.firstPlayer} topu boş bir kareye yerleştirsin!`);
+}
+
+function startMovementPhase() {
+  state.phase='movement'; state.currentPlayer=state.firstPlayer;
+  state.diceValue=null; state.moveMode=null; state.selectedPiecePos=null;
+  state.moveTargets=[]; state.ballKickTargets=[]; state.moveTurnCount=0;
+  // Give each player 2 starting cards
+  state.hands[1]=[drawCard(),drawCard()]; state.hands[2]=[drawCard(),drawCard()];
+  updatePhaseBadge(); renderBoard(); renderControls(); renderCards();
+  log('--- HAREKET FAZI BAŞLADI ---');
+  setMessage(`Oyuncu ${state.firstPlayer} ilk hamleyi yapacak. Zar atın!`);
+}
+
+function getValidMoves(row, col, distance) {
+  const piece=state.board[row][col]; if (!piece) return [];
+  const isPlus=piece.type==='plus';
+  const moves=[];
+  const dirs=isPlus?[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]:[[-1,0],[1,0],[0,-1],[0,1]];
+  // Add speed boost
+  let dist=distance;
+  if (hasEffect(row,col,'speed')) dist++;
+
+  for (const [dr,dc] of dirs) {
+    const nr=row+dr*dist, nc=col+dc*dist;
+    if (nr<0||nr>7||nc<0||nc>7) continue;
+    let blocked=false;
+    for (let s=1;s<dist;s++) {
+      const sr=row+dr*s, sc=col+dc*s;
+      if (state.board[sr][sc]||isWall(sr,sc)) { blocked=true; break; }
+      if (state.ballPos&&state.ballPos[0]===sr&&state.ballPos[1]===sc) { blocked=true; break; }
+    }
+    if (blocked) continue;
+    if (state.ballPos&&state.ballPos[0]===nr&&state.ballPos[1]===nc) continue;
+    if (isWall(nr,nc)) continue;
+    const target=state.board[nr][nc];
+    if (target&&target.player===piece.player) continue;
+    moves.push([nr,nc]);
+  }
+  return moves;
+}
+
+function calculateBallKick(pieceRow, pieceCol, distance) {
+  const [br,bc]=state.ballPos;
+  const dr=br-pieceRow, dc=bc-pieceCol;
+  // Shot boost
+  let dist=distance;
+  if (hasEffect(pieceRow,pieceCol,'shotBoost')) dist++;
+
+  let finalR=br, finalC=bc;
+  const effects=[];
+
+  for (let step=1;step<=dist;step++) {
+    const sr=br+dr*step, sc=bc+dc*step;
+    if (sr<0||sr>7||sc<0||sc>7) break;
+    if (isWall(sr,sc)) break;
+    const target=state.board[sr][sc];
+    if (target) {
+      // Reflect card check
+      if (hasEffect(sr,sc,'reflect')) {
+        effects.push({ type:'reflect', row:sr, col:sc });
+        // Ball bounces back: return to original position
+        finalR=br; finalC=bc;
+        break;
+      }
+      // Shield check
+      if (hasEffect(sr,sc,'shield')) {
+        // Ball stops before shielded piece
+        break;
+      }
+      if (target.type==='minus') {
+        effects.push({ type:'destroy', row:sr, col:sc, player:target.player });
+        finalR=sr; finalC=sc;
+      } else if (target.type==='plus') {
+        effects.push({ type:'convert', row:sr, col:sc, player:target.player });
+        break;
+      }
+    } else {
+      finalR=sr; finalC=sc;
+    }
+  }
+
+  if (finalR===br&&finalC===bc&&effects.length===0) return null;
+  if (finalR===br&&finalC===bc&&effects.every(e=>e.type==='reflect')) {
+    return { finalPos:[br,bc], effects };
+  }
+  if (finalR===br&&finalC===bc) return null;
+  return { finalPos:[finalR,finalC], effects };
+}
+
+function getPiecesAdjacentToBall(player) {
+  if (!state.ballPos) return [];
+  const [br,bc]=state.ballPos;
+  const adjacent=[];
+  const allDirs=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+  for (const [dr,dc] of allDirs) {
+    const pr=br+dr, pc=bc+dc;
+    if (pr<0||pr>7||pc<0||pc>7) continue;
+    const piece=state.board[pr][pc];
+    if (!piece||piece.player!==player) continue;
+    const isDiag=dr!==0&&dc!==0;
+    if (piece.type==='minus'&&isDiag) continue;
+    const result=calculateBallKick(pr,pc,state.diceValue);
+    if (result) adjacent.push([pr,pc]);
+  }
+  return adjacent;
+}
+
+function clearTurnEffects(player) {
+  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+    const p=state.board[r][c];
+    if (p&&p.player===player&&p.effects) {
+      delete p.effects.shield; delete p.effects.speed;
+      delete p.effects.shotBoost; delete p.effects.reflect;
+      if (Object.keys(p.effects).length===0) delete p.effects;
+    }
+  }
+}
+
+function tickWalls() {
+  state.walls = state.walls.filter(w => { w.turnsLeft--; return w.turnsLeft>0; });
+}
+
+function nextMovementTurn() {
+  // Check win
+  const winner=checkWin();
+  if (winner) { showWin(winner); return; }
+
+  clearTurnEffects(state.currentPlayer);
+  state.moveTurnCount++;
+  if (state.moveTurnCount%2===0) tickWalls(); // Every full round
+
+  let np=state.currentPlayer===1?2:1;
+  state.currentPlayer=np; state.diceValue=null; state.moveMode=null;
+  state.selectedPiecePos=null; state.moveTargets=[]; state.ballKickTargets=[]; state.activeCard=null;
+
+  // Draw a card
+  state.hands[np].push(drawCard());
+
+  renderBoard(); renderControls(); renderCards();
+  setMessage(`Oyuncu ${np} - Zar atın!`);
+  updatePlayerIndicators();
+}
+
+// ==================== CLICK HANDLER ====================
+function onCellClick(row, col) {
+  // Card targeting mode
+  if (state.activeCard) { handleCardTarget(row, col); return; }
+
+  if (state.phase==='placement') handlePlacementClick(row,col);
+  else if (state.phase==='ball-placement') handleBallPlacementClick(row,col);
+  else if (state.phase==='movement') handleMovementClick(row,col);
+}
+
+function handleBallPlacementClick(row,col) {
+  if (state.board[row][col]||isWall(row,col)) { setMessage('Bu hücre uygun değil!'); return; }
+  state.ballPos=[row,col];
+  log(`Oyuncu ${state.firstPlayer} topu (${row+1},${col+1}) konumuna yerleştirdi.`);
+  startMovementPhase();
+}
+
+function handlePlacementClick(row,col) {
+  if (!state.selectedPiece) { setMessage('Önce taş türü seçin!'); return; }
+  if (state.board[row][col]) { setMessage('Bu hücre dolu!'); return; }
+  if (!isValidPlacement(row,col,state.currentPlayer)) {
+    setMessage(`Taşlarınızı sadece ${state.currentPlayer===1?'7-8':'1-2'}. satırlara yerleştirebilirsiniz!`);
+    return;
+  }
+  const player=state.currentPlayer, type=state.selectedPiece;
+  state.board[row][col]={player,type};
+  state.pieces[player][type]--; state.placedThisTurn++; state.totalPlaced++;
+  log(`Oyuncu ${player}: ${type==='plus'?'+':'−'} → (${row+1},${col+1})`);
+  if (state.placedThisTurn>=state.diceValue||getTotalRemaining(player)===0) { state.selectedPiece=null; nextPlacementTurn(); }
+  else { state.selectedPiece=null; renderBoard(); renderControls(); setMessage(`${state.diceValue-state.placedThisTurn} taş daha yerleştirin`); }
+}
+
+function handleMovementClick(row,col) {
+  if (!state.diceValue||!state.moveMode) {
+    if (!state.diceValue) setMessage('Önce zar atın!');
+    else setMessage('Taşı Oynat veya Topu Sür seçin');
+    return;
+  }
+  if (state.moveMode==='piece') handlePieceMoveClick(row,col);
+  else if (state.moveMode==='ball') handleBallKickClick(row,col);
+}
+
+function handlePieceMoveClick(row,col) {
+  if (state.moveTargets.some(t=>t[0]===row&&t[1]===col)) {
+    const [fR,fC]=state.selectedPiecePos;
+    const piece=state.board[fR][fC]; const captured=state.board[row][col];
+    if (captured) log(`Oyuncu ${state.currentPlayer}: ${piece.type==='plus'?'+':'−'} (${fR+1},${fC+1}) → (${row+1},${col+1}) [yendi!]`);
+    else log(`Oyuncu ${state.currentPlayer}: ${piece.type==='plus'?'+':'−'} (${fR+1},${fC+1}) → (${row+1},${col+1})`);
+    state.board[row][col]=piece; state.board[fR][fC]=null;
+    state.selectedPiecePos=null; state.moveTargets=[];
+    nextMovementTurn(); return;
+  }
+  const val=state.board[row][col];
+  if (!val||val.player!==state.currentPlayer) {
+    state.selectedPiecePos=null; state.moveTargets=[]; renderBoard(); renderControls();
+    setMessage(val?'Kendi taşınızı seçin!':'Taş seçimi iptal edildi.'); return;
+  }
+  const moves=getValidMoves(row,col,state.diceValue);
+  if (!moves.length) { setMessage('Bu taş hareket edemiyor.'); state.selectedPiecePos=null; state.moveTargets=[]; renderBoard(); renderControls(); return; }
+  state.selectedPiecePos=[row,col]; state.moveTargets=moves;
+  renderBoard(); renderControls();
+  setMessage(`${val.type==='plus'?'+':'−'} seçildi. Hedef kareye dokunun.`);
+}
+
+function handleBallKickClick(row,col) {
+  if (state.ballKickTargets.some(t=>t[0]===row&&t[1]===col)) {
+    const [fR,fC]=state.selectedPiecePos;
+    const piece=state.board[fR][fC]; const oldBall=[...state.ballPos];
+    const kickResult=calculateBallKick(fR,fC,state.diceValue);
+    for (const effect of kickResult.effects) {
+      if (effect.type==='destroy') { log(`  ⚡ − (${effect.row+1},${effect.col+1}) yok edildi!`); state.board[effect.row][effect.col]=null; }
+      else if (effect.type==='convert') { log(`  🔄 + (${effect.row+1},${effect.col+1}) → − dönüştü!`); state.board[effect.row][effect.col].type='minus'; }
+      else if (effect.type==='reflect') { log(`  🔄 Top (${effect.row+1},${effect.col+1}) taşından yansıdı!`); if(state.board[effect.row][effect.col].effects) delete state.board[effect.row][effect.col].effects.reflect; }
+    }
+    state.ballPos=kickResult.finalPos;
+    log(`Oyuncu ${state.currentPlayer}: topu (${oldBall[0]+1},${oldBall[1]+1}) → (${kickResult.finalPos[0]+1},${kickResult.finalPos[1]+1}) sürdü!`);
+    state.selectedPiecePos=null; state.ballKickTargets=[];
+    nextMovementTurn(); return;
+  }
+  const val=state.board[row][col];
+  if (!val||val.player!==state.currentPlayer) { state.selectedPiecePos=null; state.ballKickTargets=[]; renderBoard(); renderControls(); setMessage('Topun yanındaki taşınızı seçin.'); return; }
+  const kickers=getPiecesAdjacentToBall(state.currentPlayer);
+  if (!kickers.some(k=>k[0]===row&&k[1]===col)) { setMessage('Bu taş topu süremez.'); return; }
+  const kickResult=calculateBallKick(row,col,state.diceValue);
+  if (!kickResult) { setMessage('Top sürülemez.'); return; }
+  state.selectedPiecePos=[row,col]; state.ballKickTargets=[kickResult.finalPos];
+  renderBoard(); renderControls();
+  const ei=kickResult.effects.length>0?` (${kickResult.effects.map(e=>e.type==='destroy'?'− yok':e.type==='convert'?'+ → −':e.type==='reflect'?'yansıma':'').filter(Boolean).join(', ')})`:'';
+  setMessage(`Top sürülecek${ei}. Altın kareye dokunun.`);
+}
+
+// ==================== CARD SYSTEM ====================
+function useCard(index) {
+  const player=state.currentPlayer;
+  const cardType=state.hands[player][index];
+  const def=CARD_DEFS[cardType];
+
+  if (cardType==='reroll') {
+    if (!state.diceValue) { setMessage('Önce zar atmalısınız!'); return; }
+    state.hands[player].splice(index,1);
+    const oldVal=state.diceValue;
+    state.diceValue=rollD3();
+    state.moveMode=null; state.selectedPiecePos=null; state.moveTargets=[]; state.ballKickTargets=[];
+    log(`Oyuncu ${player}: 🎲 Tekrar At! ${oldVal} → ${state.diceValue}`);
+    setMessage(`Zar tekrar atıldı: ${state.diceValue}!`);
+    renderBoard(); renderControls(); renderCards();
+    return;
+  }
+
+  if (def.target==='none') return;
+
+  // Enter targeting mode
+  state.activeCard = { type: cardType, handIndex: index };
+  renderBoard(); renderCards();
+  if (def.target==='own-piece') setMessage(`${def.icon} ${def.name}: Uygulanacak taşı seçin`);
+  else if (def.target==='own-minus') setMessage(`${def.icon} ${def.name}: Dönüştürülecek − taşı seçin`);
+  else if (def.target==='empty-cell') setMessage(`${def.icon} ${def.name}: Boş bir kare seçin`);
+}
+
+function cancelCard() {
+  state.activeCard=null;
+  renderBoard(); renderControls(); renderCards();
+  setMessage('Kart iptal edildi.');
+}
+
+function handleCardTarget(row, col) {
+  const card=state.activeCard;
+  const def=CARD_DEFS[card.type];
+  const player=state.currentPlayer;
+  const val=state.board[row][col];
+
+  if (def.target==='own-piece') {
+    if (!val||val.player!==player) { setMessage('Kendi taşınızı seçin!'); return; }
+    if (!val.effects) val.effects={};
+    if (card.type==='shield') val.effects.shield=true;
+    else if (card.type==='speed') val.effects.speed=true;
+    else if (card.type==='shotBoost') val.effects.shotBoost=true;
+    else if (card.type==='reflect') val.effects.reflect=true;
+    log(`Oyuncu ${player}: ${def.icon} ${def.name} → (${row+1},${col+1})`);
+  } else if (def.target==='own-minus') {
+    if (!val||val.player!==player||val.type!=='minus') { setMessage('Kendi − taşınızı seçin!'); return; }
+    val.type='plus';
+    log(`Oyuncu ${player}: ⬆️ Terfi → (${row+1},${col+1}) artık +`);
+  } else if (def.target==='empty-cell') {
+    if (val||isWall(row,col)||(state.ballPos&&state.ballPos[0]===row&&state.ballPos[1]===col)) { setMessage('Boş bir kare seçin!'); return; }
+    state.walls.push({ row, col, turnsLeft: 4 }); // 4 half-turns = 2 full rounds
+    log(`Oyuncu ${player}: 🧱 Duvar → (${row+1},${col+1})`);
+  }
+
+  state.hands[player].splice(card.handIndex, 1);
+  state.activeCard=null;
+  renderBoard(); renderControls(); renderCards();
+}
+
+function renderCards() {
+  const area=document.getElementById('cardArea');
+  if (state.phase!=='movement') { area.innerHTML=''; return; }
+  const player=state.currentPlayer;
+  const hand=state.hands[player];
+
+  let html='<div class="cards-section">';
+  html+=`<div class="cards-header"><span>Kartlar (${hand.length})</span>`;
+  if (state.activeCard) html+=`<button class="btn btn-skip" onclick="cancelCard()" style="padding:3px 10px;font-size:0.7rem">İptal</button>`;
+  html+=`</div><div class="card-hand">`;
+
+  hand.forEach((cardType,i) => {
+    const def=CARD_DEFS[cardType];
+    const isActive=state.activeCard&&state.activeCard.handIndex===i;
+    html+=`<div class="card ${isActive?'active-card':''}" onclick="useCard(${i})">
+      <div class="card-icon">${def.icon}</div>
+      <div class="card-name">${def.name}</div>
+      <div class="card-desc">${def.desc}</div>
+    </div>`;
+  });
+
+  if (hand.length===0) html+='<span style="font-size:0.75rem;color:#666">Kart yok</span>';
+  html+='</div></div>';
+  area.innerHTML=html;
+}
+
+// ==================== CONTROLS ====================
+function renderControls() {
+  const controls=document.getElementById('controls');
+  controls.innerHTML=''; updatePhaseBadge();
+
+  if (state.phase==='initial-roll') renderInitialRollControls(controls);
+  else if (state.phase==='placement') renderPlacementControls(controls);
+  else if (state.phase==='ball-placement') {
+    const i=document.createElement('div'); i.className='move-info'; i.textContent='Topu boş bir kareye yerleştirin.'; controls.appendChild(i);
+  }
+  else if (state.phase==='movement') renderMovementControls(controls);
+  else if (state.phase==='done') {
+    const b=document.createElement('button'); b.className='btn btn-roll'; b.textContent='Yeniden Başla'; b.onclick=resetGame; controls.appendChild(b);
+  }
+  updatePlayerIndicators();
+}
+
+function renderInitialRollControls(controls) {
+  const area=document.createElement('div'); area.className='initial-roll-area';
+  const diceRow=document.createElement('div'); diceRow.className='dice-row';
+  ['1','2'].forEach(pn => {
+    const col=document.createElement('div'); col.style.textAlign='center';
+    const label=document.createElement('div'); label.className='player-dice-label';
+    label.textContent=`Oyuncu ${pn}`; label.style.color=pn==='1'?'#7ec8e3':'#ffd1d1';
+    const dice=document.createElement('div'); dice.className='dice'; dice.id=`dice-p${pn}`;
+    dice.textContent=state.initialRolls[pn]||'?';
+    col.appendChild(label); col.appendChild(dice); diceRow.appendChild(col);
+    if (pn==='1') { const vs=document.createElement('div'); vs.textContent='VS'; vs.style.fontWeight='bold'; vs.style.fontSize='1.2rem'; diceRow.appendChild(vs); }
+  });
+  area.appendChild(diceRow);
+  const btn=document.createElement('button'); btn.className='btn btn-roll'; btn.textContent='Zar At!'; btn.onclick=handleInitialRoll;
+  area.appendChild(btn); controls.appendChild(area);
+}
+
+function handleInitialRoll() {
+  const r1=rollDice(), r2=rollDice();
+  state.initialRolls[1]=r1; state.initialRolls[2]=r2;
+  const d1=document.getElementById('dice-p1'), d2=document.getElementById('dice-p2');
+  if(d1){d1.textContent=r1;d1.classList.add('rolling');} if(d2){d2.textContent=r2;d2.classList.add('rolling');}
+  setTimeout(()=>{
+    if(r1===r2){setMessage(`Berabere! Tekrar atın.`);log(`Berabere: ${r1}-${r2}`);state.initialRolls={1:null,2:null};setTimeout(()=>renderControls(),800);}
+    else{const first=r1>r2?1:2;state.firstPlayer=first;state.currentPlayer=first;state.turnNumber=0;state.phase='placement';state.diceValue=null;state.placedThisTurn=0;
+    log(`Başlangıç: O1=${r1}, O2=${r2}. Oyuncu ${first} başlıyor!`);setMessage(`Oyuncu ${first} büyük attı! Zar atın!`);setTimeout(()=>{renderBoard();renderControls();},800);}
+  },600);
+}
+
+function renderPlacementControls(controls) {
+  const player=state.currentPlayer;
+  const diceArea=document.createElement('div'); diceArea.className='dice-area';
+  const dice=document.createElement('div'); dice.className='dice'; dice.id='placement-dice'; dice.textContent=state.diceValue||'?'; diceArea.appendChild(dice);
+  if(!state.diceValue){const b=document.createElement('button');b.className='btn btn-roll';b.textContent='Zar At';b.onclick=handlePlacementRoll;diceArea.appendChild(b);}
+  controls.appendChild(diceArea);
+  if(state.diceValue){
+    const rem=state.diceValue-state.placedThisTurn;
+    const info=document.createElement('div');info.className='remaining';info.textContent=`${rem} taş yerleştirilecek`;controls.appendChild(info);
+    const sel=document.createElement('div');sel.className='piece-selector';
+    const plusCls=player===1?'p1-plus-btn':'p2-plus-btn', minusCls=player===1?'p1-minus-btn':'p2-minus-btn';
+    if(state.pieces[player].plus>0){const b=document.createElement('button');b.className=`btn btn-piece ${plusCls} ${state.selectedPiece==='plus'?'selected':''}`;b.textContent=`+ (${state.pieces[player].plus})`;b.onclick=()=>{state.selectedPiece='plus';renderBoard();renderControls();};sel.appendChild(b);}
+    if(state.pieces[player].minus>0){const b=document.createElement('button');b.className=`btn btn-piece ${minusCls} ${state.selectedPiece==='minus'?'selected':''}`;b.textContent=`− (${state.pieces[player].minus})`;b.onclick=()=>{state.selectedPiece='minus';renderBoard();renderControls();};sel.appendChild(b);}
+    controls.appendChild(sel);
+  }
+}
+
+function handlePlacementRoll() {
+  const val=rollDice(); state.diceValue=val; state.placedThisTurn=0;
+  const player=state.currentPlayer, eff=Math.min(val,getTotalRemaining(player));
+  const dice=document.getElementById('placement-dice'); if(dice){dice.textContent=val;dice.classList.add('rolling');}
+  log(`Oyuncu ${player} zar: ${val} (${eff} taş)`); setMessage(`${val} geldi! ${eff} taş yerleştirin.`);
+  setTimeout(()=>{renderBoard();renderControls();},500);
+}
+
+function renderMovementControls(controls) {
+  const player=state.currentPlayer;
+  const diceArea=document.createElement('div'); diceArea.className='dice-area';
+  const dice=document.createElement('div'); dice.className='dice d3'; dice.id='movement-dice'; dice.textContent=state.diceValue||'?'; diceArea.appendChild(dice);
+  if(!state.diceValue){const b=document.createElement('button');b.className='btn btn-roll';b.textContent='Zar At (d3)';b.onclick=handleMovementRoll;diceArea.appendChild(b);}
+  controls.appendChild(diceArea);
+
+  if(state.diceValue){
+    const canKick=getPiecesAdjacentToBall(player).length>0;
+    if(canKick&&!state.moveMode){
+      const info=document.createElement('div');info.className='move-info';info.textContent=`${state.diceValue} geldi! Ne yapacaksınız?`;controls.appendChild(info);
+      const ms=document.createElement('div');ms.className='mode-selector';
+      const pb=document.createElement('button');pb.className='btn btn-mode mode-piece';pb.textContent='Taşı Oynat';pb.onclick=()=>{state.moveMode='piece';state.selectedPiecePos=null;state.moveTargets=[];state.ballKickTargets=[];renderBoard();renderControls();setMessage('Taşınızı seçin.');};ms.appendChild(pb);
+      const bb=document.createElement('button');bb.className='btn btn-mode mode-ball';bb.textContent='Topu Sür';bb.onclick=()=>{state.moveMode='ball';state.selectedPiecePos=null;state.moveTargets=[];state.ballKickTargets=[];renderBoard();renderControls();setMessage('Topun yanındaki taşınızı seçin.');};ms.appendChild(bb);
+      controls.appendChild(ms);
+    } else {
+      if(!canKick&&!state.moveMode) state.moveMode='piece';
+      const info=document.createElement('div');info.className='move-info';
+      if(state.moveMode==='piece') info.textContent=state.selectedPiecePos?'Hedef kareyi seçin.':`${state.diceValue} birim. Taşınızı seçin.`;
+      else info.textContent=state.selectedPiecePos?'Altın hedefe dokunun.':'Topun yanındaki taşınızı seçin.';
+      controls.appendChild(info);
+      if(state.moveMode&&canKick){const cb=document.createElement('button');cb.className='btn btn-skip';cb.textContent=state.moveMode==='piece'?'Topu Sür':'Taşı Oynat';cb.onclick=()=>{state.moveMode=state.moveMode==='piece'?'ball':'piece';state.selectedPiecePos=null;state.moveTargets=[];state.ballKickTargets=[];renderBoard();renderControls();};controls.appendChild(cb);}
+    }
+    const sb=document.createElement('button');sb.className='btn btn-skip';sb.textContent='Pas Geç';sb.onclick=()=>{log(`Oyuncu ${state.currentPlayer} pas geçti.`);nextMovementTurn();};controls.appendChild(sb);
+  }
+}
+
+function handleMovementRoll() {
+  const val=rollD3(); state.diceValue=val; state.moveMode=null;
+  state.selectedPiecePos=null; state.moveTargets=[]; state.ballKickTargets=[];
+  const dice=document.getElementById('movement-dice'); if(dice){dice.textContent=val;dice.classList.add('rolling');}
+  log(`Oyuncu ${state.currentPlayer} zar (d3): ${val}`); setMessage(`${val} geldi!`);
+  setTimeout(()=>{renderBoard();renderControls();},500);
+}
+
+function updatePlayerIndicators() {
+  const p1=document.getElementById('p1indicator'), p2=document.getElementById('p2indicator');
+  p1.style.opacity=state.currentPlayer===1?'1':'0.4'; p2.style.opacity=state.currentPlayer===2?'1':'0.4';
+}
+
+function resetGame() {
+  state.phase='initial-roll';
+  state.board=Array.from({length:8},()=>Array(8).fill(null));
+  state.currentPlayer=null;state.diceValue=null;state.selectedPiece=null;
+  state.pieces={1:{plus:8,minus:8},2:{plus:8,minus:8}};
+  state.initialRolls={1:null,2:null};state.firstPlayer=null;state.turnNumber=0;
+  state.placedThisTurn=0;state.totalPlaced=0;state.ballPos=null;
+  state.moveMode=null;state.selectedPiecePos=null;state.moveTargets=[];state.ballKickTargets=[];
+  state.hands={1:[],2:[]};state.activeCard=null;state.walls=[];state.moveTurnCount=0;
+  document.getElementById('log').innerHTML='';
+  document.getElementById('p1indicator').style.opacity='1';
+  document.getElementById('p2indicator').style.opacity='1';
+  document.getElementById('winOverlay').innerHTML='';
+  document.getElementById('cardArea').innerHTML='';
+  setMessage('Başlamak için zar atın!');
+  renderBoard(); renderControls();
+}
+
+renderBoard(); renderControls();
+</script>
+</body>
+</html>
