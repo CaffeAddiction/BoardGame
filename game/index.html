@@ -4,116 +4,437 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Tahta Oyunu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Russo+One&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #1a1a2e;
-    color: #eee;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 10px;
-    overflow-x: hidden;
+:root {
+  --purple: #7C3AED;
+  --violet: #A78BFA;
+  --rose:   #F43F5E;
+  --cyan:   #00D4FF;
+  --yellow: #E9E945;
+  --green:  #00FF88;
+  --gold:   #FFD700;
+  --text:   #E2E8F0;
+  --muted:  #94A3B8;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  background: #0F0F23;
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  overflow-x: hidden;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 30%, rgba(124,58,237,0.09) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 70%, rgba(244,63,94,0.07) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+  animation: bgPulse 8s ease-in-out infinite;
+}
+@keyframes bgPulse {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(124,58,237,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,58,237,0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* TITLE */
+h1 {
+  font-family: 'Russo One', sans-serif;
+  font-size: 1.6rem;
+  margin-bottom: 10px;
+  color: var(--rose);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 0 10px rgba(244,63,94,0.7), 0 0 30px rgba(244,63,94,0.3);
+  animation: titleGlow 3s ease-in-out infinite;
+  cursor: default;
+}
+@keyframes titleGlow {
+  0%,100% { text-shadow: 0 0 10px rgba(244,63,94,0.7), 0 0 30px rgba(244,63,94,0.3); }
+  50%      { text-shadow: 0 0 22px rgba(244,63,94,1), 0 0 55px rgba(244,63,94,0.5), 0 0 85px rgba(167,139,250,0.3); }
+}
+h1::before {
+  content: attr(data-text);
+  position: absolute; top: 0; left: 0;
+  color: var(--cyan);
+  opacity: 0;
+  clip-path: polygon(0 18%, 100% 18%, 100% 44%, 0 44%);
+  text-transform: uppercase;
+}
+h1::after {
+  content: attr(data-text);
+  position: absolute; top: 0; left: 0;
+  color: var(--yellow);
+  opacity: 0;
+  clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%);
+  text-transform: uppercase;
+}
+h1:hover::before { opacity: 0.7; animation: glitchA 0.25s steps(2) infinite; }
+h1:hover::after  { opacity: 0.7; animation: glitchB 0.25s steps(2) infinite; }
+@keyframes glitchA { 0%,100% { transform: translateX(-4px); } 50% { transform: translateX(4px); } }
+@keyframes glitchB { 0%,100% { transform: translateX(4px);  } 50% { transform: translateX(-4px); } }
+
+/* INFO BAR */
+.info-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 8px;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.player-indicator {
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  font-family: 'Chakra Petch', sans-serif;
+  letter-spacing: 0.05em;
+  transition: opacity 0.3s ease, box-shadow 0.3s ease;
+}
+.player1-bg { background: linear-gradient(135deg, #081630, #0f3460); border: 2px solid #3282b8; }
+.player2-bg { background: linear-gradient(135deg, #300a14, #6b0f1a); border: 2px solid var(--rose); }
+
+/* BOARD */
+.board-container {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 1;
+  z-index: 1;
+  padding: 3px;
+  border-radius: 10px;
+  background: linear-gradient(45deg, var(--purple), var(--rose), var(--cyan), var(--purple));
+  background-size: 300% 300%;
+  animation: boardBorderGlow 4s linear infinite;
+}
+@keyframes boardBorderGlow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.cell {
+  border: 1px solid rgba(124,58,237,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+  position: relative;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.cell.light { background: #1a2550; }
+.cell.dark  { background: #0d1a3e; }
+.cell:hover { filter: brightness(1.45); }
+
+/* Highlights */
+.cell.valid-target  { box-shadow: inset 0 0 0 3px var(--yellow), inset 0 0 14px rgba(233,233,69,0.35); animation: pulseYellow 1s ease-in-out infinite; }
+.cell.selected-cell { box-shadow: inset 0 0 0 3px var(--green),  inset 0 0 16px rgba(0,255,136,0.4); background: #0a2318 !important; }
+.cell.move-target   { box-shadow: inset 0 0 0 3px var(--cyan),   inset 0 0 14px rgba(0,212,255,0.35); animation: pulseCyan 1s ease-in-out infinite; }
+.cell.ball-target   { box-shadow: inset 0 0 0 3px var(--gold),   inset 0 0 16px rgba(255,215,0,0.4);  animation: pulseGold 0.75s ease-in-out infinite; }
+.cell.kicker-cell   { box-shadow: inset 0 0 0 3px #ff8c00,        inset 0 0 14px rgba(255,140,0,0.35); background: #251500 !important; }
+.cell.card-target   { box-shadow: inset 0 0 0 3px #ff00ff,        inset 0 0 16px rgba(255,0,255,0.35); animation: pulseMagenta 0.75s ease-in-out infinite; }
+.cell.wall-cell { background: #2e1e10 !important; }
+.cell.wall-cell::after { content:''; position:absolute; inset:3px; border:2px dashed #8B5A2B; border-radius:3px; pointer-events:none; opacity:0.85; }
+
+@keyframes pulseYellow {
+  0%,100% { box-shadow: inset 0 0 0 3px var(--yellow), inset 0 0 8px rgba(233,233,69,0.2); }
+  50%      { box-shadow: inset 0 0 0 3px rgba(233,233,69,0.5), inset 0 0 24px rgba(233,233,69,0.55); }
+}
+@keyframes pulseCyan {
+  0%,100% { box-shadow: inset 0 0 0 3px var(--cyan), inset 0 0 10px rgba(0,212,255,0.25); }
+  50%      { box-shadow: inset 0 0 0 3px rgba(0,212,255,0.6), inset 0 0 24px rgba(0,212,255,0.55); }
+}
+@keyframes pulseGold {
+  0%,100% { box-shadow: inset 0 0 0 3px var(--gold), inset 0 0 12px rgba(255,215,0,0.3); }
+  50%      { box-shadow: inset 0 0 0 3px rgba(255,215,0,0.7), inset 0 0 30px rgba(255,215,0,0.65); }
+}
+@keyframes pulseMagenta {
+  0%,100% { box-shadow: inset 0 0 0 3px #ff00ff, inset 0 0 10px rgba(255,0,255,0.25); }
+  50%      { box-shadow: inset 0 0 0 3px rgba(255,0,255,0.65), inset 0 0 26px rgba(255,0,255,0.55); }
+}
+
+/* PIECES */
+.cell .piece {
+  width: 82%; height: 82%;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: 'Russo One', sans-serif;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
+  position: relative;
+  transition: transform 0.15s ease;
+}
+.cell:hover .piece:not(.ball) { transform: scale(1.1); }
+
+.cell .piece.ball {
+  width: 74%; height: 74%;
+  font-size: 1.3rem;
+  background: transparent; border: none;
+  filter: drop-shadow(0 0 6px rgba(255,215,0,0.9)) drop-shadow(0 0 16px rgba(255,140,0,0.6));
+  animation: ballFloat 2s ease-in-out infinite;
+}
+@keyframes ballFloat {
+  0%,100% { transform: translateY(0) scale(1);    filter: drop-shadow(0 0 6px rgba(255,215,0,0.9)) drop-shadow(0 0 16px rgba(255,140,0,0.6)); }
+  50%      { transform: translateY(-2px) scale(1.05); filter: drop-shadow(0 0 10px rgba(255,215,0,1))   drop-shadow(0 0 26px rgba(255,140,0,0.8)); }
+}
+
+.piece.p1-plus  { background: radial-gradient(circle at 35% 35%, #5ec0f0, #2e7fbf, #0b2d5a); color: #c0e8ff; border: 2px solid #5ec0f0; box-shadow: 0 0 12px rgba(94,192,240,0.5), 0 2px 4px rgba(0,0,0,0.5); }
+.piece.p1-minus { background: radial-gradient(circle at 35% 35%, #3a9fd8, #175a8c, #062040); color: #90d8f0; border: 2px solid #3a9fd8; box-shadow: 0 0 10px rgba(58,159,216,0.4), 0 2px 4px rgba(0,0,0,0.5); }
+.piece.p2-plus  { background: radial-gradient(circle at 35% 35%, #ff7088, #d92045, #5a0812); color: #ffd8de; border: 2px solid #ff7088; box-shadow: 0 0 12px rgba(255,112,136,0.5), 0 2px 4px rgba(0,0,0,0.5); }
+.piece.p2-minus { background: radial-gradient(circle at 35% 35%, #e87060, #b03228, #600e0e); color: #ffc0b8; border: 2px solid #e87060; box-shadow: 0 0 10px rgba(232,112,96,0.4), 0 2px 4px rgba(0,0,0,0.5); }
+
+.effect-icons { position: absolute; top: -3px; right: -3px; display: flex; gap: 1px; font-size: 0.45rem; }
+.effect-icon  { background: rgba(0,0,0,0.9); border-radius: 3px; padding: 0 2px; line-height: 1.3; border: 1px solid rgba(255,255,255,0.15); }
+
+/* CONTROLS */
+.controls { width:100%; max-width:420px; margin-top:10px; display:flex; flex-direction:column; align-items:center; gap:8px; position:relative; z-index:1; }
+.dice-area { display: flex; align-items: center; gap: 15px; }
+
+.dice {
+  width: 62px; height: 62px;
+  background: linear-gradient(145deg, #f8f9fa, #d0d5dd);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 700;
+  font-family: 'Russo One', sans-serif;
+  color: #0F0F23;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5), 0 0 0 2px rgba(124,58,237,0.35), inset 0 2px 0 rgba(255,255,255,0.7), inset 0 -2px 0 rgba(0,0,0,0.15);
+}
+.dice.d3 {
+  background: linear-gradient(145deg, #FFE44D, #FF9500);
+  border-radius: 50%; width: 58px; height: 58px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5), 0 0 20px rgba(255,215,0,0.5), inset 0 2px 0 rgba(255,255,220,0.7), inset 0 -2px 0 rgba(0,0,0,0.2);
+}
+.dice.rolling { animation: roll3d 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+@keyframes roll3d {
+  0%   { transform: rotateY(0deg)   rotateX(0deg)   scale(0.7); }
+  30%  { transform: rotateY(120deg) rotateX(60deg)  scale(1.2); }
+  70%  { transform: rotateY(280deg) rotateX(-20deg) scale(1.1); }
+  100% { transform: rotateY(360deg) rotateX(0deg)   scale(1); }
+}
+
+/* BUTTONS */
+.btn {
+  padding: 10px 24px; border: none; border-radius: 8px;
+  font-size: 0.9rem; font-weight: 700;
+  font-family: 'Chakra Petch', sans-serif;
+  cursor: pointer; transition: all 0.2s ease;
+  color: #fff; letter-spacing: 0.06em; text-transform: uppercase;
+  position: relative; overflow: hidden;
+}
+.btn::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+  pointer-events: none; border-radius: 8px;
+}
+.btn:active   { transform: scale(0.95) !important; }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-roll { background: linear-gradient(135deg, #e94560, #ad0d2b); box-shadow: 0 4px 15px rgba(233,69,96,0.45), 0 0 0 1px rgba(233,69,96,0.25); }
+.btn-roll:hover:not(:disabled) { background: linear-gradient(135deg, #ff6b81, #e94560); box-shadow: 0 6px 22px rgba(233,69,96,0.65), 0 0 30px rgba(233,69,96,0.25); transform: translateY(-1px); }
+
+.btn-piece { padding: 8px 16px; font-size: 0.78rem; border-radius: 6px; }
+.piece-selector { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.btn-piece.selected { box-shadow: 0 0 0 3px var(--yellow), 0 0 15px rgba(233,233,69,0.45); transform: scale(1.06); }
+
+.btn-piece.p1-plus-btn  { background: linear-gradient(135deg, #2e7fbf, #113d6b); box-shadow: 0 3px 10px rgba(46,127,191,0.35); }
+.btn-piece.p1-minus-btn { background: linear-gradient(135deg, #175a8c, #061d38); box-shadow: 0 3px 10px rgba(23,90,140,0.3); }
+.btn-piece.p2-plus-btn  { background: linear-gradient(135deg, #d92045, #5a0812); box-shadow: 0 3px 10px rgba(217,32,69,0.35); }
+.btn-piece.p2-minus-btn { background: linear-gradient(135deg, #b03228, #500a0a); box-shadow: 0 3px 10px rgba(176,50,40,0.3); }
+
+.remaining { font-size: 0.73rem; color: var(--muted); margin-top: 2px; }
+
+.message {
+  text-align: center; font-size: 0.88rem; min-height: 1.4em;
+  color: var(--yellow);
+  font-family: 'Chakra Petch', sans-serif; font-weight: 600;
+  letter-spacing: 0.03em;
+  text-shadow: 0 0 10px rgba(233,233,69,0.45);
+  position: relative; z-index: 1;
+}
+
+.phase-badge {
+  display: inline-block; padding: 4px 14px; border-radius: 20px;
+  font-size: 0.65rem; font-weight: 700;
+  font-family: 'Russo One', sans-serif;
+  margin-bottom: 6px; letter-spacing: 0.12em;
+  position: relative; z-index: 1;
+}
+.phase-badge.placement      { background: linear-gradient(135deg, #143a22, #2d6a4f); color: #b7e4c7; border: 1px solid rgba(183,228,199,0.25); box-shadow: 0 0 14px rgba(45,106,79,0.4); }
+.phase-badge.ball-placement { background: linear-gradient(135deg, #5c3800, #b8860b); color: #fff8dc;  border: 1px solid rgba(255,248,220,0.25); box-shadow: 0 0 14px rgba(184,134,11,0.4); }
+.phase-badge.movement       { background: linear-gradient(135deg, #350a50, #7b2d8b); color: #e0b0ff; border: 1px solid rgba(224,176,255,0.25); box-shadow: 0 0 14px rgba(123,45,139,0.5); }
+
+.log {
+  width: 100%; max-width: 420px; margin-top: 10px;
+  max-height: 80px; overflow-y: auto;
+  font-size: 0.67rem; color: #4a5a7a;
+  border-top: 1px solid rgba(124,58,237,0.18); padding-top: 6px;
+  position: relative; z-index: 1;
+  scrollbar-width: thin; scrollbar-color: rgba(124,58,237,0.3) transparent;
+}
+.log div { margin-bottom: 2px; }
+
+.initial-roll-area { display:flex; flex-direction:column; align-items:center; gap:14px; padding:20px; }
+.initial-roll-area .dice-row { display:flex; gap:24px; align-items:center; }
+.initial-roll-area .player-dice-label { text-align:center; font-size:0.78rem; font-family:'Chakra Petch',sans-serif; font-weight:600; margin-bottom:6px; letter-spacing:0.06em; }
+
+.move-info { font-size:0.78rem; color:#b0b8cc; text-align:center; line-height:1.4; font-family:'Chakra Petch',sans-serif; }
+
+.btn-skip {
+  background: linear-gradient(135deg, #2a2a44, #1e1e36);
+  font-size: 0.78rem; padding: 7px 16px;
+  border: 1px solid rgba(124,58,237,0.3); box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+}
+.btn-skip:hover { background: linear-gradient(135deg, #3a3a5c, #2a2a48); border-color: rgba(124,58,237,0.55); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 10px rgba(124,58,237,0.2); }
+
+.mode-selector { display:flex; gap:10px; justify-content:center; }
+.btn-mode { padding:10px 18px; border:none; border-radius:8px; font-size:0.82rem; font-weight:700; font-family:'Chakra Petch',sans-serif; cursor:pointer; color:#fff; transition:all 0.2s ease; letter-spacing:0.06em; text-transform:uppercase; position:relative; overflow:hidden; }
+.btn-mode:active { transform: scale(0.95); }
+.btn-mode.mode-piece { background: linear-gradient(135deg, #1a5a40, #2d6a4f); box-shadow: 0 4px 14px rgba(45,106,79,0.45); }
+.btn-mode.mode-piece:hover { background: linear-gradient(135deg, #256a50, #40916c); box-shadow: 0 6px 20px rgba(45,106,79,0.65); transform: translateY(-1px); }
+.btn-mode.mode-ball { background: linear-gradient(135deg, #7a4e00, #b8860b); box-shadow: 0 4px 14px rgba(184,134,11,0.45); }
+.btn-mode.mode-ball:hover { background: linear-gradient(135deg, #9a6a00, #d4a017); box-shadow: 0 6px 20px rgba(218,165,32,0.65); transform: translateY(-1px); }
+
+/* CARDS */
+.cards-section { width:100%; max-width:420px; margin-top:8px; position:relative; z-index:1; }
+.cards-header { font-size:0.76rem; color:var(--muted); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; font-family:'Chakra Petch',sans-serif; letter-spacing:0.06em; }
+.card-hand { display:flex; gap:8px; overflow-x:auto; padding:4px 0 8px; -webkit-overflow-scrolling:touch; scrollbar-width:thin; scrollbar-color:rgba(124,58,237,0.35) transparent; }
+
+.card {
+  min-width: 72px; padding: 8px 10px; border-radius: 10px;
+  background: linear-gradient(145deg, #1e1e3a, #181830);
+  border: 2px solid rgba(124,58,237,0.35);
+  cursor: pointer; text-align: center; transition: all 0.22s ease;
+  flex-shrink: 0; position: relative; overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(124,58,237,0.1) 50%, transparent 60%);
+  transform: translateX(-200%); transition: transform 0.4s ease;
+}
+.card:hover { border-color: var(--yellow); transform: translateY(-5px); box-shadow: 0 8px 22px rgba(0,0,0,0.35), 0 0 16px rgba(124,58,237,0.3); }
+.card:hover::before { transform: translateX(200%); }
+.card:active { transform: scale(0.96); }
+.card.active-card { border-color: #ff00ff; animation: cardActivePulse 1s ease-in-out infinite; }
+@keyframes cardActivePulse {
+  0%,100% { box-shadow: 0 0 14px rgba(255,0,255,0.65), 0 0 28px rgba(255,0,255,0.25); }
+  50%      { box-shadow: 0 0 22px rgba(255,0,255,0.9),  0 0 45px rgba(255,0,255,0.4);  }
+}
+.card-icon { font-size: 1.3rem; }
+.card-name { font-size: 0.54rem; color: #ccc; margin-top: 3px; white-space: nowrap; font-family: 'Chakra Petch', sans-serif; font-weight: 600; }
+.card-desc { font-size: 0.47rem; color: #666; margin-top: 2px; font-family: 'Chakra Petch', sans-serif; }
+
+/* CARD CHOICE */
+.card-choice-overlay {
+  width: 100%; max-width: 420px; margin-top: 8px;
+  background: linear-gradient(135deg, #0e0e25, #18183a);
+  border: 2px solid var(--yellow); border-radius: 14px; padding: 14px; text-align: center;
+  box-shadow: 0 0 30px rgba(233,233,69,0.2), 0 0 70px rgba(233,233,69,0.06);
+  position: relative; z-index: 1;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.card-choice-title { font-size:0.82rem; color:var(--yellow); margin-bottom:10px; font-weight:700; font-family:'Russo One',sans-serif; letter-spacing:0.1em; text-shadow:0 0 10px rgba(233,233,69,0.5); }
+.card-choice-options { display:flex; gap:10px; justify-content:center; }
+.card-choice {
+  min-width: 90px; padding: 12px; border-radius: 12px;
+  background: linear-gradient(145deg, #1e1e3a, #181830);
+  border: 2px solid rgba(124,58,237,0.4);
+  cursor: pointer; text-align: center; transition: all 0.25s ease;
+}
+.card-choice:hover { border-color: var(--yellow); transform: translateY(-7px); box-shadow: 0 12px 28px rgba(0,0,0,0.45), 0 0 22px rgba(233,233,69,0.35); }
+.card-choice:active { transform: scale(0.95); }
+.card-choice .card-icon { font-size: 1.6rem; }
+.card-choice .card-name { font-size: 0.66rem; color: #ccc; margin-top: 5px; font-family: 'Chakra Petch', sans-serif; font-weight: 600; }
+.card-choice .card-desc { font-size: 0.5rem; color: #777; margin-top: 2px; font-family: 'Chakra Petch', sans-serif; }
+
+/* WIN OVERLAY */
+#winOverlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.88);
+  display: none; align-items: center; justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+}
+.win-box {
+  background: linear-gradient(135deg, #0e0e25, #1a1a38);
+  border: 3px solid var(--rose); border-radius: 20px; padding: 35px 45px; text-align: center;
+  box-shadow: 0 0 45px rgba(244,63,94,0.45), 0 0 90px rgba(244,63,94,0.12);
+  animation: winIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes winIn {
+  from { opacity: 0; transform: scale(0.65) rotate(-8deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+.win-box h2 { font-family: 'Russo One', sans-serif; font-size: 1.5rem; margin-bottom: 10px; letter-spacing: 0.06em; }
+.win-box .btn { margin-top: 15px; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.1ms !important;
   }
-  h1 { font-size: 1.3rem; margin-bottom: 8px; color: #e94560; }
-  .info-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 400px; margin-bottom: 8px; gap: 8px; }
-  .player-indicator { padding: 6px 14px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; }
-  .player1-bg { background: #0f3460; border: 2px solid #3282b8; }
-  .player2-bg { background: #6b0f1a; border: 2px solid #e94560; }
-  .board-container { position: relative; width: 100%; max-width: 400px; aspect-ratio: 1; }
-  .board { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); width: 100%; height: 100%; border: 2px solid #e94560; border-radius: 6px; overflow: hidden; }
-  .cell { border: 1px solid #16213e; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: bold; cursor: pointer; transition: background 0.2s; position: relative; user-select: none; -webkit-tap-highlight-color: transparent; }
-  .cell.light { background: #16213e; }
-  .cell.dark { background: #0f3460; }
-  .cell:hover { filter: brightness(1.3); }
-  .cell.valid-target { box-shadow: inset 0 0 0 3px #e9e945; animation: pulse 1s infinite; }
-  .cell.selected-cell { box-shadow: inset 0 0 0 3px #00ff88; background: #1a3a2e !important; }
-  .cell.move-target { box-shadow: inset 0 0 0 3px #00ccff; animation: pulseMove 1s infinite; }
-  .cell.ball-target { box-shadow: inset 0 0 0 3px #ffd700; animation: pulseBall 1s infinite; }
-  .cell.kicker-cell { box-shadow: inset 0 0 0 3px #ff8c00; background: #3a2a0e !important; }
-  .cell.card-target { box-shadow: inset 0 0 0 3px #ff00ff; animation: pulseCard 1s infinite; }
-  .cell.wall-cell { background: #4a3728 !important; }
-  .cell.wall-cell::after { content: ''; position: absolute; inset: 3px; border: 2px dashed #8B4513; border-radius: 3px; pointer-events: none; }
-
-  @keyframes pulse { 0%,100% { box-shadow: inset 0 0 0 3px #e9e945; } 50% { box-shadow: inset 0 0 0 3px #e9e94588; } }
-  @keyframes pulseMove { 0%,100% { box-shadow: inset 0 0 0 3px #00ccff; } 50% { box-shadow: inset 0 0 0 3px #00ccff88; } }
-  @keyframes pulseBall { 0%,100% { box-shadow: inset 0 0 0 3px #ffd700; } 50% { box-shadow: inset 0 0 0 3px #ffd70088; } }
-  @keyframes pulseCard { 0%,100% { box-shadow: inset 0 0 0 3px #ff00ff; } 50% { box-shadow: inset 0 0 0 3px #ff00ff88; } }
-
-  .cell .piece { width: 80%; height: 80%; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); position: relative; }
-  .cell .piece.ball { width: 70%; height: 70%; background: radial-gradient(circle at 35% 35%, #fff, #ffd700, #ff8c00); border: 2px solid #fff; color: #333; font-size: 0.9rem; box-shadow: 0 0 10px rgba(255,215,0,0.6); }
-  .piece.p1-plus { background: linear-gradient(135deg, #3282b8, #0f3460); color: #7ec8e3; border: 2px solid #7ec8e3; }
-  .piece.p1-minus { background: linear-gradient(135deg, #1a5276, #0a2647); color: #5dade2; border: 2px solid #5dade2; }
-  .piece.p2-plus { background: linear-gradient(135deg, #e94560, #6b0f1a); color: #ffd1d1; border: 2px solid #ffd1d1; }
-  .piece.p2-minus { background: linear-gradient(135deg, #c0392b, #7b241c); color: #f1948a; border: 2px solid #f1948a; }
-
-  .effect-icons { position: absolute; top: -2px; right: -2px; display: flex; gap: 1px; font-size: 0.45rem; }
-  .effect-icon { background: #000a; border-radius: 3px; padding: 0 2px; line-height: 1.2; }
-
-  .controls { width: 100%; max-width: 400px; margin-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .dice-area { display: flex; align-items: center; gap: 15px; }
-  .dice { width: 60px; height: 60px; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #1a1a2e; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
-  .dice.d3 { background: linear-gradient(135deg, #ffd700, #ff8c00); border-radius: 50%; width: 55px; height: 55px; }
-  .dice.rolling { animation: roll 0.5s ease-out; }
-  @keyframes roll { 0% { transform: rotate(0) scale(0.8); } 50% { transform: rotate(180deg) scale(1.1); } 100% { transform: rotate(360deg) scale(1); } }
-
-  .btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; color: #fff; }
-  .btn:active { transform: scale(0.95); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-roll { background: #e94560; }
-  .btn-roll:hover:not(:disabled) { background: #ff6b81; }
-  .btn-piece { padding: 8px 16px; font-size: 0.85rem; border-radius: 6px; }
-  .piece-selector { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-  .btn-piece.selected { box-shadow: 0 0 0 3px #e9e945; transform: scale(1.05); }
-  .btn-piece.p1-plus-btn { background: #3282b8; }
-  .btn-piece.p1-minus-btn { background: #1a5276; }
-  .btn-piece.p2-plus-btn { background: #e94560; }
-  .btn-piece.p2-minus-btn { background: #c0392b; }
-  .remaining { font-size: 0.75rem; color: #aaa; margin-top: 2px; }
-  .message { text-align: center; font-size: 0.9rem; min-height: 1.4em; color: #e9e945; }
-  .phase-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; margin-bottom: 6px; }
-  .phase-badge.placement { background: #2d6a4f; color: #b7e4c7; }
-  .phase-badge.ball-placement { background: #b8860b; color: #fff8dc; }
-  .phase-badge.movement { background: #7b2d8b; color: #e0b0ff; }
-  .log { width: 100%; max-width: 400px; margin-top: 10px; max-height: 80px; overflow-y: auto; font-size: 0.7rem; color: #888; border-top: 1px solid #333; padding-top: 6px; }
-  .log div { margin-bottom: 2px; }
-  .initial-roll-area { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px; }
-  .initial-roll-area .dice-row { display: flex; gap: 20px; align-items: center; }
-  .initial-roll-area .player-dice-label { text-align: center; font-size: 0.8rem; margin-bottom: 4px; }
-  .move-info { font-size: 0.8rem; color: #ccc; text-align: center; line-height: 1.4; }
-  .btn-skip { background: #555; font-size: 0.8rem; padding: 6px 16px; }
-  .btn-skip:hover { background: #777; }
-  .mode-selector { display: flex; gap: 10px; justify-content: center; }
-  .btn-mode { padding: 10px 18px; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: bold; cursor: pointer; color: #fff; transition: all 0.2s; }
-  .btn-mode:active { transform: scale(0.95); }
-  .btn-mode.mode-piece { background: #2d6a4f; }
-  .btn-mode.mode-piece:hover { background: #40916c; }
-  .btn-mode.mode-ball { background: #b8860b; }
-  .btn-mode.mode-ball:hover { background: #daa520; }
-
-  /* CARD SYSTEM */
-  .cards-section { width: 100%; max-width: 400px; margin-top: 8px; }
-  .cards-header { font-size: 0.8rem; color: #aaa; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
-  .card-hand { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0; -webkit-overflow-scrolling: touch; }
-  .card { min-width: 70px; padding: 6px 8px; border-radius: 8px; background: #2a2a4a; border: 2px solid #555; cursor: pointer; text-align: center; transition: all 0.2s; flex-shrink: 0; }
-  .card:hover { border-color: #e9e945; transform: translateY(-2px); }
-  .card:active { transform: scale(0.95); }
-  .card.active-card { border-color: #ff00ff; box-shadow: 0 0 8px #ff00ff88; }
-  .card-icon { font-size: 1.2rem; }
-  .card-name { font-size: 0.55rem; color: #ccc; margin-top: 2px; white-space: nowrap; }
-  .card-desc { font-size: 0.5rem; color: #888; margin-top: 1px; }
-
-  .win-overlay { position: fixed; inset: 0; background: #000c; display: flex; align-items: center; justify-content: center; z-index: 100; }
-  .win-box { background: #1a1a2e; border: 3px solid #e94560; border-radius: 16px; padding: 30px 40px; text-align: center; }
-  .win-box h2 { font-size: 1.5rem; margin-bottom: 10px; }
-  .win-box .btn { margin-top: 15px; }
+}
 </style>
 </head>
 <body>
 
-<h1>Tahta Oyunu</h1>
+<h1 data-text="Tahta Oyunu">Tahta Oyunu</h1>
 <div class="info-bar">
   <div class="player-indicator player1-bg" id="p1indicator">Oyuncu 1 (Mavi)</div>
   <div class="player-indicator player2-bg" id="p2indicator">Oyuncu 2 (Kırmızı)</div>
@@ -149,11 +470,11 @@ const state = {
   firstPlayer: null, turnNumber: 0, placedThisTurn: 0, totalPlaced: 0,
   ballPos: null,
   moveMode: null, selectedPiecePos: null, moveTargets: [], ballKickTargets: [],
-  // Cards
   hands: { 1: [], 2: [] },
-  activeCard: null, // { type, ... } card being targeted
-  walls: [], // { row, col, turnsLeft }
-  moveTurnCount: 0, // total movement turns elapsed (for wall countdown)
+  activeCard: null,
+  cardChoices: null,
+  walls: [],
+  moveTurnCount: 0,
 };
 
 function log(msg) { const el=document.getElementById('log'); const d=document.createElement('div'); d.textContent=msg; el.prepend(d); }
@@ -168,23 +489,33 @@ function updatePhaseBadge() {
 }
 
 function rollDice() { return Math.floor(Math.random()*6)+1; }
-function rollD3() { return Math.floor(Math.random()*3)+1; }
+function rollD3()   { return Math.floor(Math.random()*3)+1; }
 function drawCard() { return CARD_POOL[Math.floor(Math.random()*CARD_POOL.length)]; }
+function generateCardChoices() {
+  const choices=[];
+  while(choices.length<3) { const c=drawCard(); if(!choices.includes(c)) choices.push(c); }
+  return choices;
+}
+function selectCardChoice(index) {
+  const card=state.cardChoices[index];
+  state.hands[state.currentPlayer].push(card);
+  const def=CARD_DEFS[card];
+  log(`Oyuncu ${state.currentPlayer}: ${def.icon} ${def.name} kartını seçti`);
+  state.cardChoices=null;
+  renderBoard(); renderControls(); renderCards();
+  setMessage(`${def.icon} ${def.name} seçildi! Zar atın!`);
+}
 
 function getPieceEffects(row, col) {
   const p = state.board[row][col];
   if (!p || !p.effects) return [];
   return Object.keys(p.effects).filter(k => p.effects[k]);
 }
-
 function hasEffect(row, col, effect) {
   const p = state.board[row][col];
   return p && p.effects && p.effects[effect];
 }
-
-function isWall(row, col) {
-  return state.walls.some(w => w.row===row && w.col===col);
-}
+function isWall(row, col) { return state.walls.some(w => w.row===row && w.col===col); }
 
 // ==================== WIN CONDITION ====================
 function checkWin() {
@@ -201,8 +532,17 @@ function checkWin() {
 function showWin(winner) {
   state.phase = 'done';
   const ov = document.getElementById('winOverlay');
-  const color = winner===1 ? '#3282b8' : '#e94560';
-  ov.innerHTML = `<div class="win-box"><h2 style="color:${color}">Oyuncu ${winner} Kazandı!</h2><p>Tüm rakip + taşları yok edildi!</p><button class="btn btn-roll" onclick="resetGame();document.getElementById('winOverlay').innerHTML=''">Yeniden Başla</button></div>`;
+  const color  = winner===1 ? '#5ec0f0'              : '#ff7088';
+  const shadow = winner===1 ? 'rgba(94,192,240,0.6)' : 'rgba(255,112,136,0.6)';
+  const shadowFaint = winner===1 ? 'rgba(94,192,240,0.12)' : 'rgba(255,112,136,0.12)';
+  const name   = winner===1 ? 'Oyuncu 1 (Mavi)'     : 'Oyuncu 2 (Kırmızı)';
+  ov.style.display = 'flex';
+  ov.innerHTML = `<div class="win-box" style="border-color:${color};box-shadow:0 0 45px ${shadow},0 0 90px ${shadowFaint}">
+    <div style="font-size:2.8rem;margin-bottom:8px;display:block;animation:ballFloat 1.5s ease-in-out infinite">🏆</div>
+    <h2 style="color:${color};text-shadow:0 0 20px ${shadow}">${name}<br>Kazandı!</h2>
+    <p style="color:#8090a8;font-size:0.82rem;margin-top:8px;font-family:'Chakra Petch',sans-serif">Tüm rakip + taşları yok edildi!</p>
+    <button class="btn btn-roll" onclick="resetGame()">Yeniden Başla</button>
+  </div>`;
 }
 
 // ==================== BOARD RENDERING ====================
@@ -223,8 +563,7 @@ function renderBoard() {
         const cls=val.player===1?(val.type==='plus'?'p1-plus':'p1-minus'):(val.type==='plus'?'p2-plus':'p2-minus');
         piece.className=`piece ${cls}`;
         piece.textContent=val.type==='plus'?'+':'−';
-        // Effect icons
-        const efx = getPieceEffects(r,c);
+        const efx=getPieceEffects(r,c);
         if (efx.length>0) {
           const icons=document.createElement('div');
           icons.className='effect-icons';
@@ -239,7 +578,6 @@ function renderBoard() {
         const ball=document.createElement('div'); ball.className='piece ball'; ball.textContent='⚽'; cell.appendChild(ball);
       }
 
-      // Highlights
       if (state.phase==='placement' && state.selectedPiece && !val && isValidPlacement(r,c,state.currentPlayer)) cell.classList.add('valid-target');
       if (state.phase==='ball-placement' && !val && !isWall(r,c)) cell.classList.add('valid-target');
 
@@ -250,11 +588,10 @@ function renderBoard() {
         if (state.moveMode==='ball' && state.selectedPiecePos && state.selectedPiecePos[0]===r && state.selectedPiecePos[1]===c) cell.classList.add('kicker-cell');
       }
 
-      // Card targeting highlights
       if (state.activeCard) {
         const ct=CARD_DEFS[state.activeCard.type].target;
-        if (ct==='own-piece' && val && val.player===state.currentPlayer) cell.classList.add('card-target');
-        if (ct==='own-minus' && val && val.player===state.currentPlayer && val.type==='minus') cell.classList.add('card-target');
+        if (ct==='own-piece'  && val && val.player===state.currentPlayer) cell.classList.add('card-target');
+        if (ct==='own-minus'  && val && val.player===state.currentPlayer && val.type==='minus') cell.classList.add('card-target');
         if (ct==='empty-cell' && !val && !isWall(r,c) && !(state.ballPos&&state.ballPos[0]===r&&state.ballPos[1]===c)) cell.classList.add('card-target');
       }
 
@@ -294,7 +631,6 @@ function startMovementPhase() {
   state.phase='movement'; state.currentPlayer=state.firstPlayer;
   state.diceValue=null; state.moveMode=null; state.selectedPiecePos=null;
   state.moveTargets=[]; state.ballKickTargets=[]; state.moveTurnCount=0;
-  // Give each player 2 starting cards
   state.hands[1]=[drawCard(),drawCard()]; state.hands[2]=[drawCard(),drawCard()];
   updatePhaseBadge(); renderBoard(); renderControls(); renderCards();
   log('--- HAREKET FAZI BAŞLADI ---');
@@ -304,12 +640,10 @@ function startMovementPhase() {
 function getValidMoves(row, col, distance) {
   const piece=state.board[row][col]; if (!piece) return [];
   const isPlus=piece.type==='plus';
-  const moves=[];
   const dirs=isPlus?[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]:[[-1,0],[1,0],[0,-1],[0,1]];
-  // Add speed boost
   let dist=distance;
   if (hasEffect(row,col,'speed')) dist++;
-
+  const moves=[];
   for (const [dr,dc] of dirs) {
     const nr=row+dr*dist, nc=col+dc*dist;
     if (nr<0||nr>7||nc<0||nc>7) continue;
@@ -332,47 +666,24 @@ function getValidMoves(row, col, distance) {
 function calculateBallKick(pieceRow, pieceCol, distance) {
   const [br,bc]=state.ballPos;
   const dr=br-pieceRow, dc=bc-pieceCol;
-  // Shot boost
   let dist=distance;
   if (hasEffect(pieceRow,pieceCol,'shotBoost')) dist++;
-
   let finalR=br, finalC=bc;
   const effects=[];
-
   for (let step=1;step<=dist;step++) {
     const sr=br+dr*step, sc=bc+dc*step;
     if (sr<0||sr>7||sc<0||sc>7) break;
     if (isWall(sr,sc)) break;
     const target=state.board[sr][sc];
     if (target) {
-      // Reflect card check
-      if (hasEffect(sr,sc,'reflect')) {
-        effects.push({ type:'reflect', row:sr, col:sc });
-        // Ball bounces back: return to original position
-        finalR=br; finalC=bc;
-        break;
-      }
-      // Shield check
-      if (hasEffect(sr,sc,'shield')) {
-        // Ball stops before shielded piece
-        break;
-      }
-      if (target.type==='minus') {
-        effects.push({ type:'destroy', row:sr, col:sc, player:target.player });
-        finalR=sr; finalC=sc;
-      } else if (target.type==='plus') {
-        effects.push({ type:'convert', row:sr, col:sc, player:target.player });
-        break;
-      }
-    } else {
-      finalR=sr; finalC=sc;
-    }
+      if (hasEffect(sr,sc,'reflect')) { effects.push({type:'reflect',row:sr,col:sc}); finalR=br; finalC=bc; break; }
+      if (hasEffect(sr,sc,'shield')) break;
+      if (target.type==='minus') { effects.push({type:'destroy',row:sr,col:sc,player:target.player}); finalR=sr; finalC=sc; }
+      else if (target.type==='plus') { effects.push({type:'convert',row:sr,col:sc,player:target.player}); break; }
+    } else { finalR=sr; finalC=sc; }
   }
-
   if (finalR===br&&finalC===bc&&effects.length===0) return null;
-  if (finalR===br&&finalC===bc&&effects.every(e=>e.type==='reflect')) {
-    return { finalPos:[br,bc], effects };
-  }
+  if (finalR===br&&finalC===bc&&effects.every(e=>e.type==='reflect')) return { finalPos:[br,bc], effects };
   if (finalR===br&&finalC===bc) return null;
   return { finalPos:[finalR,finalC], effects };
 }
@@ -406,36 +717,26 @@ function clearTurnEffects(player) {
   }
 }
 
-function tickWalls() {
-  state.walls = state.walls.filter(w => { w.turnsLeft--; return w.turnsLeft>0; });
-}
+function tickWalls() { state.walls=state.walls.filter(w=>{w.turnsLeft--;return w.turnsLeft>0;}); }
 
 function nextMovementTurn() {
-  // Check win
   const winner=checkWin();
   if (winner) { showWin(winner); return; }
-
   clearTurnEffects(state.currentPlayer);
   state.moveTurnCount++;
-  if (state.moveTurnCount%2===0) tickWalls(); // Every full round
-
+  if (state.moveTurnCount%2===0) tickWalls();
   let np=state.currentPlayer===1?2:1;
   state.currentPlayer=np; state.diceValue=null; state.moveMode=null;
   state.selectedPiecePos=null; state.moveTargets=[]; state.ballKickTargets=[]; state.activeCard=null;
-
-  // Draw a card
-  state.hands[np].push(drawCard());
-
+  state.cardChoices=generateCardChoices();
   renderBoard(); renderControls(); renderCards();
-  setMessage(`Oyuncu ${np} - Zar atın!`);
+  setMessage(`Oyuncu ${np} - 3 karttan birini seçin!`);
   updatePlayerIndicators();
 }
 
 // ==================== CLICK HANDLER ====================
 function onCellClick(row, col) {
-  // Card targeting mode
   if (state.activeCard) { handleCardTarget(row, col); return; }
-
   if (state.phase==='placement') handlePlacementClick(row,col);
   else if (state.phase==='ball-placement') handleBallPlacementClick(row,col);
   else if (state.phase==='movement') handleMovementClick(row,col);
@@ -452,8 +753,7 @@ function handlePlacementClick(row,col) {
   if (!state.selectedPiece) { setMessage('Önce taş türü seçin!'); return; }
   if (state.board[row][col]) { setMessage('Bu hücre dolu!'); return; }
   if (!isValidPlacement(row,col,state.currentPlayer)) {
-    setMessage(`Taşlarınızı sadece ${state.currentPlayer===1?'7-8':'1-2'}. satırlara yerleştirebilirsiniz!`);
-    return;
+    setMessage(`Taşlarınızı sadece ${state.currentPlayer===1?'7-8':'1-2'}. satırlara yerleştirebilirsiniz!`); return;
   }
   const player=state.currentPlayer, type=state.selectedPiece;
   state.board[row][col]={player,type};
@@ -498,7 +798,7 @@ function handlePieceMoveClick(row,col) {
 function handleBallKickClick(row,col) {
   if (state.ballKickTargets.some(t=>t[0]===row&&t[1]===col)) {
     const [fR,fC]=state.selectedPiecePos;
-    const piece=state.board[fR][fC]; const oldBall=[...state.ballPos];
+    const oldBall=[...state.ballPos];
     const kickResult=calculateBallKick(fR,fC,state.diceValue);
     for (const effect of kickResult.effects) {
       if (effect.type==='destroy') { log(`  ⚡ − (${effect.row+1},${effect.col+1}) yok edildi!`); state.board[effect.row][effect.col]=null; }
@@ -524,10 +824,10 @@ function handleBallKickClick(row,col) {
 
 // ==================== CARD SYSTEM ====================
 function useCard(index) {
+  if (state.cardChoices) { setMessage('Önce bir kart seçmelisiniz!'); return; }
   const player=state.currentPlayer;
   const cardType=state.hands[player][index];
   const def=CARD_DEFS[cardType];
-
   if (cardType==='reroll') {
     if (!state.diceValue) { setMessage('Önce zar atmalısınız!'); return; }
     state.hands[player].splice(index,1);
@@ -536,39 +836,30 @@ function useCard(index) {
     state.moveMode=null; state.selectedPiecePos=null; state.moveTargets=[]; state.ballKickTargets=[];
     log(`Oyuncu ${player}: 🎲 Tekrar At! ${oldVal} → ${state.diceValue}`);
     setMessage(`Zar tekrar atıldı: ${state.diceValue}!`);
-    renderBoard(); renderControls(); renderCards();
-    return;
+    renderBoard(); renderControls(); renderCards(); return;
   }
-
   if (def.target==='none') return;
-
-  // Enter targeting mode
-  state.activeCard = { type: cardType, handIndex: index };
+  state.activeCard={type:cardType,handIndex:index};
   renderBoard(); renderCards();
-  if (def.target==='own-piece') setMessage(`${def.icon} ${def.name}: Uygulanacak taşı seçin`);
-  else if (def.target==='own-minus') setMessage(`${def.icon} ${def.name}: Dönüştürülecek − taşı seçin`);
-  else if (def.target==='empty-cell') setMessage(`${def.icon} ${def.name}: Boş bir kare seçin`);
+  if (def.target==='own-piece')  setMessage(`${def.icon} ${def.name}: Uygulanacak taşı seçin`);
+  else if (def.target==='own-minus')   setMessage(`${def.icon} ${def.name}: Dönüştürülecek − taşı seçin`);
+  else if (def.target==='empty-cell')  setMessage(`${def.icon} ${def.name}: Boş bir kare seçin`);
 }
 
-function cancelCard() {
-  state.activeCard=null;
-  renderBoard(); renderControls(); renderCards();
-  setMessage('Kart iptal edildi.');
-}
+function cancelCard() { state.activeCard=null; renderBoard(); renderControls(); renderCards(); setMessage('Kart iptal edildi.'); }
 
 function handleCardTarget(row, col) {
   const card=state.activeCard;
   const def=CARD_DEFS[card.type];
   const player=state.currentPlayer;
   const val=state.board[row][col];
-
   if (def.target==='own-piece') {
     if (!val||val.player!==player) { setMessage('Kendi taşınızı seçin!'); return; }
     if (!val.effects) val.effects={};
-    if (card.type==='shield') val.effects.shield=true;
-    else if (card.type==='speed') val.effects.speed=true;
+    if (card.type==='shield')    val.effects.shield=true;
+    else if (card.type==='speed')     val.effects.speed=true;
     else if (card.type==='shotBoost') val.effects.shotBoost=true;
-    else if (card.type==='reflect') val.effects.reflect=true;
+    else if (card.type==='reflect')   val.effects.reflect=true;
     log(`Oyuncu ${player}: ${def.icon} ${def.name} → (${row+1},${col+1})`);
   } else if (def.target==='own-minus') {
     if (!val||val.player!==player||val.type!=='minus') { setMessage('Kendi − taşınızı seçin!'); return; }
@@ -576,11 +867,10 @@ function handleCardTarget(row, col) {
     log(`Oyuncu ${player}: ⬆️ Terfi → (${row+1},${col+1}) artık +`);
   } else if (def.target==='empty-cell') {
     if (val||isWall(row,col)||(state.ballPos&&state.ballPos[0]===row&&state.ballPos[1]===col)) { setMessage('Boş bir kare seçin!'); return; }
-    state.walls.push({ row, col, turnsLeft: 4 }); // 4 half-turns = 2 full rounds
+    state.walls.push({row,col,turnsLeft:4});
     log(`Oyuncu ${player}: 🧱 Duvar → (${row+1},${col+1})`);
   }
-
-  state.hands[player].splice(card.handIndex, 1);
+  state.hands[player].splice(card.handIndex,1);
   state.activeCard=null;
   renderBoard(); renderControls(); renderCards();
 }
@@ -590,13 +880,28 @@ function renderCards() {
   if (state.phase!=='movement') { area.innerHTML=''; return; }
   const player=state.currentPlayer;
   const hand=state.hands[player];
+  let html='';
 
-  let html='<div class="cards-section">';
+  if (state.cardChoices) {
+    html+='<div class="card-choice-overlay">';
+    html+=`<div class="card-choice-title">🃏 Bir kart seçin!</div>`;
+    html+='<div class="card-choice-options">';
+    state.cardChoices.forEach((cardType,i)=>{
+      const def=CARD_DEFS[cardType];
+      html+=`<div class="card-choice" onclick="selectCardChoice(${i})">
+        <div class="card-icon">${def.icon}</div>
+        <div class="card-name">${def.name}</div>
+        <div class="card-desc">${def.desc}</div>
+      </div>`;
+    });
+    html+='</div></div>';
+  }
+
+  html+='<div class="cards-section">';
   html+=`<div class="cards-header"><span>Kartlar (${hand.length})</span>`;
   if (state.activeCard) html+=`<button class="btn btn-skip" onclick="cancelCard()" style="padding:3px 10px;font-size:0.7rem">İptal</button>`;
   html+=`</div><div class="card-hand">`;
-
-  hand.forEach((cardType,i) => {
+  hand.forEach((cardType,i)=>{
     const def=CARD_DEFS[cardType];
     const isActive=state.activeCard&&state.activeCard.handIndex===i;
     html+=`<div class="card ${isActive?'active-card':''}" onclick="useCard(${i})">
@@ -605,8 +910,7 @@ function renderCards() {
       <div class="card-desc">${def.desc}</div>
     </div>`;
   });
-
-  if (hand.length===0) html+='<span style="font-size:0.75rem;color:#666">Kart yok</span>';
+  if (hand.length===0) html+='<span style="font-size:0.75rem;color:#444;font-family:\'Chakra Petch\',sans-serif">Kart yok</span>';
   html+='</div></div>';
   area.innerHTML=html;
 }
@@ -615,9 +919,8 @@ function renderCards() {
 function renderControls() {
   const controls=document.getElementById('controls');
   controls.innerHTML=''; updatePhaseBadge();
-
-  if (state.phase==='initial-roll') renderInitialRollControls(controls);
-  else if (state.phase==='placement') renderPlacementControls(controls);
+  if (state.phase==='initial-roll')     renderInitialRollControls(controls);
+  else if (state.phase==='placement')   renderPlacementControls(controls);
   else if (state.phase==='ball-placement') {
     const i=document.createElement('div'); i.className='move-info'; i.textContent='Topu boş bir kareye yerleştirin.'; controls.appendChild(i);
   }
@@ -631,14 +934,18 @@ function renderControls() {
 function renderInitialRollControls(controls) {
   const area=document.createElement('div'); area.className='initial-roll-area';
   const diceRow=document.createElement('div'); diceRow.className='dice-row';
-  ['1','2'].forEach(pn => {
+  ['1','2'].forEach(pn=>{
     const col=document.createElement('div'); col.style.textAlign='center';
     const label=document.createElement('div'); label.className='player-dice-label';
-    label.textContent=`Oyuncu ${pn}`; label.style.color=pn==='1'?'#7ec8e3':'#ffd1d1';
+    label.textContent=`Oyuncu ${pn}`; label.style.color=pn==='1'?'#5ec0f0':'#ff7088';
     const dice=document.createElement('div'); dice.className='dice'; dice.id=`dice-p${pn}`;
     dice.textContent=state.initialRolls[pn]||'?';
     col.appendChild(label); col.appendChild(dice); diceRow.appendChild(col);
-    if (pn==='1') { const vs=document.createElement('div'); vs.textContent='VS'; vs.style.fontWeight='bold'; vs.style.fontSize='1.2rem'; diceRow.appendChild(vs); }
+    if (pn==='1') {
+      const vs=document.createElement('div'); vs.textContent='VS';
+      vs.style.cssText='font-weight:700;font-size:1.2rem;font-family:Russo One,sans-serif;color:#A78BFA;text-shadow:0 0 10px rgba(167,139,250,0.5)';
+      diceRow.appendChild(vs);
+    }
   });
   area.appendChild(diceRow);
   const btn=document.createElement('button'); btn.className='btn btn-roll'; btn.textContent='Zar At!'; btn.onclick=handleInitialRoll;
@@ -710,6 +1017,7 @@ function renderMovementControls(controls) {
 }
 
 function handleMovementRoll() {
+  if (state.cardChoices) { setMessage('Önce bir kart seçmelisiniz!'); return; }
   const val=rollD3(); state.diceValue=val; state.moveMode=null;
   state.selectedPiecePos=null; state.moveTargets=[]; state.ballKickTargets=[];
   const dice=document.getElementById('movement-dice'); if(dice){dice.textContent=val;dice.classList.add('rolling');}
@@ -719,22 +1027,30 @@ function handleMovementRoll() {
 
 function updatePlayerIndicators() {
   const p1=document.getElementById('p1indicator'), p2=document.getElementById('p2indicator');
-  p1.style.opacity=state.currentPlayer===1?'1':'0.4'; p2.style.opacity=state.currentPlayer===2?'1':'0.4';
+  if (state.currentPlayer===1) {
+    p1.style.opacity='1'; p1.style.boxShadow='0 0 18px rgba(50,130,184,0.8), 0 0 35px rgba(50,130,184,0.3)';
+    p2.style.opacity='0.38'; p2.style.boxShadow='none';
+  } else if (state.currentPlayer===2) {
+    p2.style.opacity='1'; p2.style.boxShadow='0 0 18px rgba(244,63,94,0.8), 0 0 35px rgba(244,63,94,0.3)';
+    p1.style.opacity='0.38'; p1.style.boxShadow='none';
+  } else {
+    p1.style.opacity='1'; p1.style.boxShadow='none';
+    p2.style.opacity='1'; p2.style.boxShadow='none';
+  }
 }
 
 function resetGame() {
   state.phase='initial-roll';
   state.board=Array.from({length:8},()=>Array(8).fill(null));
-  state.currentPlayer=null;state.diceValue=null;state.selectedPiece=null;
+  state.currentPlayer=null; state.diceValue=null; state.selectedPiece=null;
   state.pieces={1:{plus:8,minus:8},2:{plus:8,minus:8}};
-  state.initialRolls={1:null,2:null};state.firstPlayer=null;state.turnNumber=0;
-  state.placedThisTurn=0;state.totalPlaced=0;state.ballPos=null;
-  state.moveMode=null;state.selectedPiecePos=null;state.moveTargets=[];state.ballKickTargets=[];
-  state.hands={1:[],2:[]};state.activeCard=null;state.walls=[];state.moveTurnCount=0;
+  state.initialRolls={1:null,2:null}; state.firstPlayer=null; state.turnNumber=0;
+  state.placedThisTurn=0; state.totalPlaced=0; state.ballPos=null;
+  state.moveMode=null; state.selectedPiecePos=null; state.moveTargets=[]; state.ballKickTargets=[];
+  state.hands={1:[],2:[]}; state.activeCard=null; state.cardChoices=null; state.walls=[]; state.moveTurnCount=0;
   document.getElementById('log').innerHTML='';
-  document.getElementById('p1indicator').style.opacity='1';
-  document.getElementById('p2indicator').style.opacity='1';
-  document.getElementById('winOverlay').innerHTML='';
+  const ov=document.getElementById('winOverlay');
+  ov.innerHTML=''; ov.style.display='none';
   document.getElementById('cardArea').innerHTML='';
   setMessage('Başlamak için zar atın!');
   renderBoard(); renderControls();
